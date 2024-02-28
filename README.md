@@ -1,6 +1,6 @@
 # Código para Acesso à EEPROM
 
-[Este código](https://github.com/fabioqueiroz1415/ESP8266/blob/main/W_R_EEPROM.ino) é um exemplo de como utilizar a biblioteca EEPROM em um microcontrolador Arduino para armazenar e manipular dados na memória EEPROM.
+[Este código](https://github.com/fabioqueiroz1415/ESP8266/blob/main/Algoritmo_comunicacao_serial_eeprom.ino) é um exemplo de como utilizar a biblioteca EEPROM no microcontrolador NodeMCU 1.0 (ESP12-E Module) para armazenar e manipular dados na memória EEPROM.
 
 ## Funcionalidades
 
