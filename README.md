@@ -1,6 +1,6 @@
 # Código para Acesso à EEPROM
 
-Este código é um exemplo de como utilizar a biblioteca EEPROM em um microcontrolador Arduino para armazenar e manipular dados na memória EEPROM.
+[Este](https://github.com/fabioqueiroz1415/EEPROM/blob/main/algoritmo.ino) código é um exemplo de como utilizar a biblioteca EEPROM em um microcontrolador Arduino para armazenar e manipular dados na memória EEPROM.
 
 ## Funcionalidades
 
