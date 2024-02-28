@@ -6,8 +6,8 @@
  * uma matriz 2x10 representando as duas listas de 10 valores cada;
  * uma lista com 20 posições para mesclar as duas.
  */
- 
 int lista[2][10], lista_mesclada[20];
+bool listas_mescladas = false;
 
 // Função de setup
 void setup() {
@@ -17,15 +17,21 @@ void setup() {
   // Inicializa a EEPROM com 512 bytes de tamanho
   EEPROM.begin(512);
 
-  pinMode(D1, OUTPUT);//1 laranja
-  pinMode(D3, OUTPUT); //2 laranja
-  pinMode(D6, OUTPUT); //1 verde
-  pinMode(D8, OUTPUT); //2 verde
+  // Configura os pinos dos LEDs
+  pinMode(D1, OUTPUT);  // Pino 1 laranja
+  pinMode(D3, OUTPUT);  // Pino 2 laranja
+  pinMode(D6, OUTPUT);  // Pino 1 verde
+  pinMode(D8, OUTPUT);  // Pino 2 verde
 
+  // Carrega o estado dos LEDs da memória EEPROM
   carregar_led_da_memoria(D1);
   carregar_led_da_memoria(D3);
   carregar_led_da_memoria(D6);
   carregar_led_da_memoria(D8);
+
+  if(digitalRead(D8) && digitalRead(D6)) {
+    listas_mescladas = true;
+  }
 }
 
 // Função loop principal
@@ -43,7 +49,9 @@ void loop() {
   Serial.read(); // Limpa o buffer
 
   // Aguarda entrada do teclado
-  while (!Serial.available());
+  while (!Serial.available()) {
+    inverte_leds_mescla();
+  }
 
   // Lê a opção do usuário e converte a entrada para inteiro
   int escolha = Serial.parseInt();
@@ -100,7 +108,6 @@ void preenche_lista(int numero_lista, uint8_t led) {
   Serial.read();
 
   // Pede os valores da lista ao usuário
-  
   Serial.print("Valores da lista " + String(numero_lista + 1) + ", separados por espaço: ");
   while (!Serial.available()) {
     delay(400);
@@ -142,7 +149,7 @@ void preenche_lista(int numero_lista, uint8_t led) {
     inverter_led(led);
     delay(100);
 
-    //aguardar o proximo valor apenas até o penúltimo
+    //aguardar o próximo valor apenas até o penúltimo
     if(i < 9) {
       Serial.print("Aguardando o " + String(i + 2) + "º valor: ");
       while (!Serial.available()) {
@@ -165,14 +172,19 @@ void preenche_lista(int numero_lista, uint8_t led) {
 
 // Função para mesclar as duas listas
 void mescla_listas(uint8_t led_lista1, uint8_t led_lista2) {
+  if(!digitalRead(led_lista1) || !digitalRead(led_lista2)) {
+    Serial.print("Uma das listas não está preenchida!");
+    return;
+  }
 
+  acender_led(led_lista1);
+  apagar_led(led_lista2);
   // Concatena as duas listas em "lista_mesclada"
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < 10; j++) {
       inverter_led(led_lista1);
       inverter_led(led_lista2);
       
-
       lista_mesclada[i * 10 + j] = lista[i][j];
       Serial.println("Mesclando listas... (" + String(i * 10 + j + 1) + "/20)");
       delay(100);
@@ -187,9 +199,11 @@ void mescla_listas(uint8_t led_lista1, uint8_t led_lista2) {
   salvar_led_na_memoria(led_lista2);
   delay(300);
   Serial.print("Listas mescladas!");
+  listas_mescladas = true;
   delay(400);
 }
 
+// Função para salvar o estado do LED na memória EEPROM
 bool salvar_led_na_memoria(uint8_t led) {
   int endereco;
   uint8_t estado = digitalRead(led);
@@ -218,7 +232,7 @@ bool salvar_led_na_memoria(uint8_t led) {
 
 // Função para salvar a lista mesclada na EEPROM
 void salva_na_memoria(uint8_t led, uint8_t led_delete) {
-  Serial.println("Mémoria:");
+  Serial.println("Memória:");
   Serial.print("\t");
   Serial.println("Valor:");
 
@@ -257,6 +271,7 @@ void salva_na_memoria(uint8_t led, uint8_t led_delete) {
   }
 }
 
+// Função para carregar o estado do LED da memória EEPROM
 void carregar_led_da_memoria(uint8_t led) {
   int endereco;
   switch(led) {
@@ -307,27 +322,26 @@ void le_da_memoria(int8_t led) {
 
 // Função para limpar a lista mesclada da EEPROM
 void limpa_memoria(uint8_t led_lista1, uint8_t led_lista2, uint8_t led_salvo, uint8_t led_delete) {
-  acender_led(led_lista1);
-  acender_led(led_lista2);
-  acender_led(led_salvo);
   // Escreve zero em todos os endereços da lista
+    apagar_led(led_delete);
+    apagar_led(led_lista1);
+    apagar_led(led_lista2);
+    apagar_led(led_salvo);
   int endereco;
   for(int i = 0; i < 2; i ++) {
     for(int j = 0; j < 10; j ++) {
       endereco = i * 10 + j;
-      apagar_led(led_delete);
       lista_mesclada[endereco] = 0;
       lista[i][j] = 0;
       EEPROM.write(endereco, 0);
       Serial.println("Limpando dados...(" + String(endereco + 1) + "/20)");
-      if(endereco == 4) apagar_led(led_lista1);
-      else if(endereco == 9) apagar_led(led_lista2);
-      else if(endereco == 14) apagar_led(led_salvo);
-      delay(100);
-      for(int i = 0; i < 7; i ++) {
-        inverter_led(led_delete);
-        delay(100);
-      }
+      inverter_led(led_salvo);
+      inverter_led(led_lista2);
+      inverter_led(led_lista1);
+      inverter_led(led_delete);
+      delay(400);
+      inverter_led(led_delete);
+      delay(400);
     }
   }
 
@@ -336,10 +350,14 @@ void limpa_memoria(uint8_t led_lista1, uint8_t led_lista2, uint8_t led_salvo, ui
     delay(300);
     Serial.println("Todos os dados foram limpos.");
     acender_led(led_delete);
+    apagar_led(led_lista1);
+    apagar_led(led_lista2);
+    apagar_led(led_salvo);
     salvar_led_na_memoria(led_lista1);
     salvar_led_na_memoria(led_lista2);
     salvar_led_na_memoria(led_salvo);
     salvar_led_na_memoria(led_delete);
+    listas_mescladas = false;
     delay(400);
   } else {
     delay(300);
@@ -348,15 +366,30 @@ void limpa_memoria(uint8_t led_lista1, uint8_t led_lista2, uint8_t led_salvo, ui
   }
 }
 
+// Função para acender um LED
 void acender_led(uint8_t led) {
   digitalWrite(led, HIGH);
 }
 
+// Função para apagar um LED
 void apagar_led(uint8_t led) {
   digitalWrite(led, LOW);
 }
 
+// Função para inverter o estado de um LED
 void inverter_led(uint8_t led) {
   if(digitalRead(led) == 0) digitalWrite(led, HIGH);
   else digitalWrite(led, LOW);
+}
+
+void inverte_leds_mescla() {
+  if(!listas_mescladas) return;
+  uint8_t led_lista1 = D8;
+  uint8_t led_lista2 = D6;
+  delay(800);
+  inverter_led(led_lista1);
+  inverter_led(led_lista2);
+  delay(800);
+  inverter_led(led_lista1);
+  inverter_led(led_lista2);
 }
