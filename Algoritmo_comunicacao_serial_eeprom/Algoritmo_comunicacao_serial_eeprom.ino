@@ -181,7 +181,7 @@ void mescla_listas(uint8_t led_lista1, uint8_t led_lista2) {
   }
 
   //mesclando as listas
-  lista_mesclada.size = 20;
+  lista_mesclada.size = lista1.size + lista2.size;
   lista_mesclada.setPrimeiro(lista1.getPrimeiro());
   lista_mesclada.setUltimo(lista2.getUltimo());
   lista_mesclada.get(9) -> prox = lista2.getPrimeiro();
