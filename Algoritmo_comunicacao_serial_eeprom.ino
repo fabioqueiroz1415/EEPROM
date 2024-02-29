@@ -1,12 +1,16 @@
 // Biblioteca para acesso à EEPROM
 #include <EEPROM.h>
+#include <LDE.h>
 
 /* 
  * Declaração de:
  * uma matriz 2x10 representando as duas listas de 10 valores cada;
  * uma lista com 20 posições para mesclar as duas.
  */
-int lista[2][10], lista_mesclada[20];
+ 
+LDE lista1 = LDE();
+LDE lista2 = LDE();
+LDE lista_mesclada = LDE();
 bool listas_mescladas = false;
 
 // Função de setup
@@ -26,8 +30,6 @@ void setup() {
   // Carrega o estado dos LEDs da memória EEPROM
   carregar_led_da_memoria(D1);
   carregar_led_da_memoria(D3);
-  carregar_led_da_memoria(D6);
-  carregar_led_da_memoria(D8);
 
   if(digitalRead(D8) && digitalRead(D6)) {
     listas_mescladas = true;
@@ -106,6 +108,8 @@ void loop() {
 void preenche_lista(int numero_lista, uint8_t led) {
   acender_led(led);
   Serial.read();
+  LDE *lista = &lista1;
+  if(numero_lista) lista = &lista2;
 
   // Pede os valores da lista ao usuário
   Serial.print("Valores da lista " + String(numero_lista + 1) + ", separados por espaço: ");
@@ -137,11 +141,11 @@ void preenche_lista(int numero_lista, uint8_t led) {
       return;
     }
     num = str_num.toInt();
-    lista[numero_lista][i] = num;
+    lista -> add(num);
 
     inverter_led(led);
 
-    Serial.print("Inserindo valor: " + String(lista[numero_lista][i]) + "... (");
+    Serial.print("Inserindo valor: " + String(lista -> get(i) -> dado) + "... (");
     Serial.print(((i + 1.0) / 10.0) * 100.0, 0);
     Serial.println("%)");
 
@@ -161,7 +165,6 @@ void preenche_lista(int numero_lista, uint8_t led) {
       Serial.println();
     }
   }
-  salvar_led_na_memoria(led);
 
   while(Serial.available()) Serial.read();
 
@@ -177,26 +180,13 @@ void mescla_listas(uint8_t led_lista1, uint8_t led_lista2) {
     return;
   }
 
-  acender_led(led_lista1);
-  apagar_led(led_lista2);
-  // Concatena as duas listas em "lista_mesclada"
-  for (int i = 0; i < 2; i++) {
-    for (int j = 0; j < 10; j++) {
-      inverter_led(led_lista1);
-      inverter_led(led_lista2);
-      
-      lista_mesclada[i * 10 + j] = lista[i][j];
-      Serial.println("Mesclando listas... (" + String(i * 10 + j + 1) + "/20)");
-      delay(100);
-      inverter_led(led_lista1);
-      inverter_led(led_lista2);
-      delay(100);
-    }
-  }
-  acender_led(led_lista1);
-  acender_led(led_lista2);
-  salvar_led_na_memoria(led_lista1);
-  salvar_led_na_memoria(led_lista2);
+  //mesclando as listas
+  lista_mesclada.size = 20;
+  lista_mesclada.setPrimeiro(lista1.getPrimeiro());
+  lista_mesclada.setUltimo(lista2.getUltimo());
+  lista_mesclada.get(9) -> prox = lista2.getPrimeiro();
+  lista_mesclada.get(10) -> ant = lista1.getUltimo();
+
   delay(300);
   Serial.print("Listas mescladas!");
   listas_mescladas = true;
@@ -239,7 +229,7 @@ void salva_na_memoria(uint8_t led, uint8_t led_delete) {
   // Escreve os valores da lista na EEPROM
   for (int endereco = 0; endereco < 20; endereco++) {
     inverter_led(led);
-    int valor = lista_mesclada[endereco];
+    int valor = lista_mesclada.get(endereco) -> dado;
     EEPROM.write(endereco, valor);
 
     Serial.print(endereco);
@@ -309,6 +299,7 @@ void le_da_memoria(int8_t led) {
     Serial.print(endereco);
     Serial.print("\t");
     Serial.print(valor, DEC);
+    lista_mesclada.add(valor);
     Serial.println();
     delay(100);
     inverter_led(led);
@@ -331,8 +322,6 @@ void limpa_memoria(uint8_t led_lista1, uint8_t led_lista2, uint8_t led_salvo, ui
   for(int i = 0; i < 2; i ++) {
     for(int j = 0; j < 10; j ++) {
       endereco = i * 10 + j;
-      lista_mesclada[endereco] = 0;
-      lista[i][j] = 0;
       EEPROM.write(endereco, 0);
       Serial.println("Limpando dados...(" + String(endereco + 1) + "/20)");
       inverter_led(led_salvo);
@@ -348,6 +337,9 @@ void limpa_memoria(uint8_t led_lista1, uint8_t led_lista2, uint8_t led_salvo, ui
   // Confirma a limpeza da EEPROM
   if (EEPROM.commit()) {
     delay(300);
+    lista1.clear();
+    lista2.clear();
+    lista_mesclada.clear();
     Serial.println("Todos os dados foram limpos.");
     acender_led(led_delete);
     apagar_led(led_lista1);
@@ -386,10 +378,11 @@ void inverte_leds_mescla() {
   if(!listas_mescladas) return;
   uint8_t led_lista1 = D8;
   uint8_t led_lista2 = D6;
-  delay(800);
-  inverter_led(led_lista1);
+  //deixando os leds alternados
+  if(digitalRead(led_lista1) != digitalRead(led_lista2)) inverter_led(led_lista1);
   inverter_led(led_lista2);
   delay(800);
   inverter_led(led_lista1);
   inverter_led(led_lista2);
+  delay(800);
 }
